@@ -22,14 +22,10 @@ class Clint extends Table
      */
     public function index()
     {
+        $clints = ClintModel::all();
         // $clints = ClintModel::paginate(20);
         //  $clints = ClintModel::get();
         // $clints = ClintModel::where('clintdel', '=', 1)->get();
-        $clints = ClintModel::all();
-        
-
-
-
         // $clints=DB::select("SELECT * FROM " . SELF::$tb_clints );
         // $clints = DB::table(self::$tb_clints)->where('clintdel', '=', '0')->paginate(20);
         
@@ -59,8 +55,6 @@ class Clint extends Table
     public function store(StoreclintRequest $request)  
       {
        
-        
-
         $clintsNumber	= $request->clintsNumber;
         $clintsName	= $request->clintsName;
         $contactLastName = $request->contactLastName;
@@ -107,10 +101,8 @@ class Clint extends Table
         session(['clint_added'=> true]);
     }
        return redirect()->route('clints.show',$clintsNumber);
+       // $sales = $clints->sales()->get();
     }
-
-
-
 
     /**
      * Display the specified resource.
@@ -118,109 +110,94 @@ class Clint extends Table
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    
-    
+      
     public function show($clintsNumber)
     {
-
+        
         $tbclint = self::$tb_clints;
         $tblorder = self::$tb_order;
         $tbsales = self::$tb_sales;
+        
+        $clint = ClintModel::with('sales')->findOrFail($clintsNumber);
+        
+        $orderdetails = $clint->Orderdetails;
+        
+        $total = 0;
+        foreach($orderdetails as $orderdetail){
+      
+            $total += $orderdetail['quantityOrdered'] * $orderdetail['priceEach'];
+            }
+            
+            $orders = $clint->Shippedorder;
+            
+            // return $orders;
+            
+            $CountOrders = $orders->count();
+            
+            $first_order_on = $orders->min('orderDate');
+            
+            // return $first_order_on;
+            
+            $pices = $orderdetails->sum('quantityOrdered');
 
+            $clint = $clint->toArray();
         
+            
+            $msg=null;
         
-        //   $clint = DB::selectOne("SELECT * FROM  $tbclint  c LEFT JOIN $tbsales s ON c.Repforsales = s.salesNumber
-        //   WHERE c.clintsNumber = '$clintsNumber'");
+            $added = session()->get('clint_added');
+        $updated = session()->get('clint_updated');
+            
+            if($added){
+              
+                $msg="clints seccesseful added";   
+            }       
+            
+            if($updated){
+                $msg = "clints updated successfuly";
+            }
+            
+            session(['clint_updated'=>false]);
+            session(['clint_added'=>false]);
+            
+            // session()->remove('clints_added')
+            // session()->remove('clints_updated')
+             
+           return view('clints.show',compact('clint','orders','msg','pices','total','first_order_on','CountOrders'));
+           
+            
+            //   $clint = DB::selectOne("SELECT * FROM  $tbclint  c LEFT JOIN $tbsales s ON c.Repforsales = s.salesNumber
+            //   WHERE c.clintsNumber = '$clintsNumber'");
         //     functions::dnb($clint);
         // $clint = ClintModel::with('sales')->findOrFail($clintsNumber);
-    // one statement get the joined table
-    
+        // one statement get the joined table
+        
         // $clint = ClintModel::where('clintsNumber', '=', $clintsNumber)->leftjoin('sales','Repforsales','=','salesNumber')->get();
         // return $clint;
-
-  // Get only the main table record
-
-  //  $clints = ClintModel::find($clintsNumber);
+        
+        // Get only the main table record
+        
+        //  $clints = ClintModel::find($clintsNumber);
         
         // $clints = ClintModel::FindorFail($clintsNumber);
-    //    if(!$clints){
+        //    if(!$clints){
     //         return 'no customer found';
     //    }
     
     // get only forign table record
-    
-    // $sales = $clints->sales()->get();
-    
-    
-    
+        
     // dynamic relationship property
     
     // $clints = ClintModel::findorfail($clintsNumber);
     //     // return $clints;
     //     $sales = $clints->sales;
-    //     return $sales;
-    
-    
-    // using with return both tables forin table is sub object
-    
-    $clint = ClintModel::with('sales')->findOrFail($clintsNumber);
-    
-    
+    //     return $sales;   
+    // using with return both tables forin table is sub object   
     //     // $sales = $clint->sales()->get();
     //      return $clint->sales->firstName; 
     
-    $orderdetails = $clint->Orderdetails;
-    
-    //  return $orderdetails;
-    
-    $total = 0;
-    foreach($orderdetails as $orderdetail){
-
-        $total += $orderdetail['quantityOrdered'] * $orderdetail['priceEach'];
-        }
-
-        $orders = $clint->Shippedorder;
-        
-        // return $orders;
-        
-        $CountOrders = $orders->count();
-        
-        $first_order_on = $orders->min('orderDate');
-        
-        // return $first_order_on;
-        
-        $pices = $orderdetails->sum('quantityOrdered');
-        
-        
-        
-        
-        
+    //  return $orderdetails;    
         //   $order = DB::scalar("SELECT COUNT(clintsNumber) orders FROM $tblorder WHERE clintsNumber = '$clintsNumber';");
-       
-        $clint = $clint->toArray();
-
-        
-        $msg=null;
-
-        $added = session()->get('clint_added');
-    $updated = session()->get('clint_updated');
-        
-        if($added){
-          
-            $msg="clints seccesseful added";   
-        }       
-        
-        if($updated){
-            $msg = "clints updated successfuly";
-        }
-        
-        session(['clint_updated'=>false]);
-        session(['clint_added'=>false]);
-        
-        // session()->remove('clints_added')
-        // session()->remove('clints_updated')
-         
-       return view('clints.show',compact('clint','orders','msg','pices','total','first_order_on','CountOrders'));
        
     }
     // ----------------------------------------------------------
@@ -238,9 +215,6 @@ class Clint extends Table
         $clint = DB::table(self::$tb_clints)->where('clintsNumber', '=', $id)->first();
 
         $clint = get_object_vars($clint);
-
-       
-       
 
         $sellers = DB::table(self::$tb_sales)->whereNotIn('jobTitle', ['marketing', 'manger'])
         ->get(['firstName','lastName','salesNumber']);
@@ -315,13 +289,7 @@ class Clint extends Table
         $clints = ClintModel::limit($limit);
 
         return view('clints.index',compact('clints'));
-
-
     }
-
-
-
-
 
     function orders($id){
          $orders=DB::table(self::$tb_order)->where('clintsNumber','=',$id)->get();
